@@ -17,42 +17,48 @@ type Filters struct {
 func (filters *Filters) WeightAndHeight(height int, weight int) ([]*models.Pokemon, int, []error, error) {
 	capoke := make(chan *models.Pokemon)
 	caerr := make(chan error)
-	exit := make(chan int, 1)
+	urlchan := make(chan string)
 	wg := sync.WaitGroup{}
 	pokemons, err := filters.ApiRequest.GetAllPokemon()
 	if err != nil {
 		return nil, 0, nil, err
 	}
-	go filters.GetPoke(pokemons, height, weight, capoke, caerr, exit)
+	go filters.GetPoke(pokemons, height, weight, capoke, caerr, urlchan)
+	// go ObtenerUrl(urlchan, pokemons)
 	var array []*models.Pokemon
 	var erros []error
-	wg.Add(1)
+	wg.Add(2)
 
-	go func(arr *[]*models.Pokemon, erros *[]error) {
-		for {
-
-			select {
-			case a := <-capoke:
-				*arr = append(*arr, a)
-
-			case b := <-caerr:
-				*erros = append(*erros, b)
-			case <-exit:
-				wg.Done()
-				return
-			}
+	go func() {
+		defer wg.Done()
+		for v := range capoke {
+			array = append(array, v)
 		}
 
-	}(&array, &erros)
+	}()
+	go func() {
+		defer wg.Done()
+		for ve := range caerr {
+			erros = append(erros, ve)
+		}
+	}()
 	wg.Wait()
 	return array, len(array), erros, nil
 }
 
-func (filters *Filters) GetPoke(pokemons *models.PokemonList, height, weight int, capoke chan *models.Pokemon, caerr chan error, salir chan int) {
+func (filters *Filters) GetPoke(pokemons *models.PokemonList, height, weight int, capoke chan *models.Pokemon, caerr chan error, urlchannel chan string) {
 	var wg sync.WaitGroup
+	workerpool := make(chan string, 10)
+
 	for _, result := range pokemons.Results {
 		wg.Add(1)
+		workerpool <- "End"
 		go func(url string) {
+			defer func() {
+				<-workerpool
+				wg.Done()
+			}()
+
 			p, err := filters.ApiRequest.GetPokemonByUrlId(url)
 			if err != nil {
 				caerr <- err
@@ -61,12 +67,10 @@ func (filters *Filters) GetPoke(pokemons *models.PokemonList, height, weight int
 					capoke <- p
 				}
 			}
-			wg.Done()
 		}(result.Url)
 	}
 	wg.Wait()
 	close(capoke)
 	close(caerr)
-	salir <- 0
-	close(salir)
+
 }

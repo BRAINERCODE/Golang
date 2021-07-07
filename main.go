@@ -28,7 +28,7 @@ func main() {
 		ApiRequest: &requests.PokeApiRequest{},
 	}
 
-	b, _, d, _ := a.WeightAndHeight(100, 100)
+	array, count, errors, _ := a.WeightAndHeight(100, 100)
 
-	fmt.Println(b, len(d))
+	fmt.Printf("%v La cantidad de pokemones es :  %v  Con un total de %v  errores ", array, count, len(errors))
 }

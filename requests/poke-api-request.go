@@ -2,6 +2,7 @@ package requests
 
 import (
 	"encoding/json"
+	"errors"
 	"io/ioutil"
 	"net/http"
 	"os"
@@ -21,8 +22,8 @@ func (*PokeApiRequest) GetPokemonByUrlId(url string) (*models.Pokemon, error) {
 
 	resp, err := http.Get(url)
 
-	if err != nil {
-		return nil, err
+	if err != nil || resp.StatusCode > 399 {
+		return nil, errors.New("Error, intentelo nuevamente")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
@@ -41,8 +42,8 @@ func (*PokeApiRequest) GetAllPokemon() (*models.PokemonList, error) {
 
 	resp, err := http.Get(os.Getenv("PokemonURL"))
 
-	if err != nil {
-		return nil, err
+	if err != nil || resp.StatusCode > 399 {
+		return nil, errors.New("Error, intentelo nuevamente")
 	}
 
 	body, err := ioutil.ReadAll(resp.Body)
