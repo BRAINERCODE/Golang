@@ -4,8 +4,9 @@ import (
 	"encoding/json"
 	"io/ioutil"
 	"net/http"
-	"reflect"
 	"testing"
+
+	"github.com/stretchr/testify/assert"
 )
 
 func Test_CapturingGetForFiltersWeight500andheight500(t *testing.T) {
@@ -49,16 +50,40 @@ func Test_CapturingGetForFiltersWeight500andheight500(t *testing.T) {
 
 	json.Unmarshal(ResponseData, &p)
 
-	if len(p.Values) != 2 {
-		t.Error("No esperabamos esta data")
-	}
+	assert.Len(t, p.Values, 2)
 
 	if response.StatusCode != 200 {
 
 		t.Error("La respuesta HTTP no fue exitosa!!")
 	}
-	if !reflect.DeepEqual(p.Values, proof1.Values) {
-		t.Error("Los Valores no coinciden")
+
+	assert.Equal(t, p.Values, proof1.Values)
+	assert.Equal(t, p, proof1)
+
+}
+func Test_CapturingGetForFiltersWeight_ErrorAPI(t *testing.T) {
+	//
+	type Pokemon struct {
+		Height int `json:"height"`
 	}
+	type responseRequest struct {
+		Count  string      `json:"count"`
+		Errors interface{} `json:"errors"`
+		Values []Pokemon   `json:"values"`
+	}
+
+	response, _ := http.Get("http://localhost:4000/pokemons?weight=500&height=500")
+
+	ResponseData, _ := ioutil.ReadAll(response.Body)
+
+	var p responseRequest
+
+	err := json.Unmarshal(ResponseData, &p)
+
+	if response.StatusCode != 200 {
+
+		t.Error("La respuesta HTTP no fue exitosa!!")
+	}
+	assert.Error(t, err)
 
 }
